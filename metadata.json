@@ -1,0 +1,5 @@
+{
+  "name": "LingoLift",
+  "description": "A smart English learning assistant for Chinese speakers. It paraphrases Chinese inputs into English and corrects grammar for English inputs before responding.",
+  "requestFramePermissions": []
+}
