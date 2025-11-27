@@ -16,16 +16,39 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement>(null);
+  const shouldAutoScrollRef = useRef(true);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Function to scroll to bottom
+  const scrollToBottom = (instant = false) => {
+    messagesEndRef.current?.scrollIntoView({ 
+      behavior: instant ? 'auto' : 'smooth', 
+      block: 'end' 
+    });
   };
 
+  // Check if user is near bottom to determine if we should auto-scroll on new messages
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      // Use a small buffer (e.g., 50px) to allow for minor discrepancies
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      shouldAutoScrollRef.current = isNearBottom;
+    }
+  };
+
+  // Auto-scroll effect when messages change
   useEffect(() => {
-    scrollToBottom();
+    if (shouldAutoScrollRef.current) {
+      // Use instant scroll for streaming updates to prevent "jumping/fighting" behavior
+      scrollToBottom(true);
+    }
   }, [messages]);
 
   const handleSendMessage = async (text: string) => {
+    // Force auto-scroll when user sends a new message
+    shouldAutoScrollRef.current = true;
+    
     const userMessageId = Date.now().toString();
     const newUserMessage: Message = {
       id: userMessageId,
@@ -36,6 +59,9 @@ const App: React.FC = () => {
 
     setMessages((prev) => [...prev, newUserMessage]);
     setIsLoading(true);
+
+    // Initial smooth scroll to show user message
+    setTimeout(() => scrollToBottom(false), 50);
 
     const botMessageId = (Date.now() + 1).toString();
     // Initialize bot message placeholder
@@ -83,6 +109,7 @@ const App: React.FC = () => {
     if (confirm("Are you sure you want to clear the conversation history?")) {
       resetChatSession();
       setMessages([INITIAL_MESSAGE]);
+      shouldAutoScrollRef.current = true;
     }
   };
 
@@ -111,7 +138,11 @@ const App: React.FC = () => {
       </header>
 
       {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+      <main 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth"
+      >
         <div className="max-w-4xl mx-auto flex flex-col min-h-full">
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
